@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "jest --coverage",
-    "test:ci": "jest --coverage --runInBand",
-    "build": "tsc"
+    "test:ci": "jest --coverage --runInBand"
   },
   "author": "",
   "license": "ISC",
@@ -15,7 +14,7 @@
   },
   "dependencies": {
     "express": "^5.1.0",
-    "supertest": "^7.1.0",
-    "typescript": "^5.8.3"
+    "supertest": "^7.1.0"
+   
   }
 }
