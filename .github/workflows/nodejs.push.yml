@@ -39,13 +39,13 @@ jobs:
         run: npm test -- --runInBand --coverage
 
       - name: Upload Coverage Report (HTML)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: html-coverage-report
           path: coverage/lcov-report/
-
+      
       - name: Upload lcov.info
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: lcov
           path: coverage/lcov.info
