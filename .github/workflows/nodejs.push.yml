@@ -15,19 +15,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      
       - name: Checkout Repository
         uses: actions/checkout@v3
 
+     
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 23.3.0 
+         node-version: 18
 
+     
       - name: Install Dependencies
         run: npm install  # Installs dependencies
 
-      - name: Ensure Jest is Installed
-        run: npm install --save-dev jest
-
       - name: Run Unit Tests
-        run: npx jest # Runs unit tests
+        run: npx jest --runInBand
+
+      # - name: Build Project
+      #   run: npm run build  
