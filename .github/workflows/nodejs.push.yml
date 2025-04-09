@@ -1,0 +1,36 @@
+name: Node.js Push Pipeline
+
+on:
+  push:
+    branches:
+      - "**" # Runs on all branches except main
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+
+jobs:
+  BuildAndUnitTestApp:
+    runs-on: ubuntu-latest
+
+    steps:
+      
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+     
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 23.3.0 
+
+     
+      - name: Install Dependencies
+        run: npm install  # Installs dependencies
+
+      - name: Run Unit Tests
+        run: npm test  # Runs unit tests
+
+      # - name: Build Project
+      #   run: npm run build  
