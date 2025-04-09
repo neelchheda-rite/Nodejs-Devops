@@ -30,7 +30,7 @@ jobs:
         run: npm install  # Installs dependencies
 
       - name: Run Unit Tests
-        run: npm test  # Runs unit tests
+        run: npx jest # Runs unit tests
 
       # - name: Build Project
       #   run: npm run build  
