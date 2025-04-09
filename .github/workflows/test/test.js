@@ -1,5 +1,5 @@
 const request = require('supertest');
-const app = require("../../../app"); // path to your app.js
+const app = require("../../../app"); 
 
 describe('Login API', () => {
   it('should return 200 and a token for valid credentials', async () => {
