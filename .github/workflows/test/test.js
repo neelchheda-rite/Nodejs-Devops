@@ -20,3 +20,23 @@ describe('Login API', () => {
     expect(res.body.message).toBe('Invalid credentials');
   });
 });
+
+describe('Logout API', () => {
+  it('should return 200 for valid token', async () => {
+    const res = await request(app)
+      .post('/logout')
+      .send({ token: 'abc123' });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.message).toBe('Logout successful');
+    
+  });
+  it('should return 401 for invalid token', async () => {
+    const res = await request(app)
+      .post('/logout')
+      .send({ token: 'wrongtoken' });
+
+    expect(res.statusCode).toBe(401);
+    expect(res.body.message).toBe('Invalid token');
+  });
+});
