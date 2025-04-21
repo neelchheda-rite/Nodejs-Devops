@@ -12,4 +12,14 @@ app.post('/login', (req, res) => {
   }
 });
 
+
+app.post('/logout', (req, res) => {
+  const { token } = req.body;
+  if (token === 'abc123') {
+    return res.status(200).json({ message: 'Logout successful' });
+  } else {
+    return res.status(401).json({ message: 'Invalid token' });
+  }
+})
+
 module.exports = app;
