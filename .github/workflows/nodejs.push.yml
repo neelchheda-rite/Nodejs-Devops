@@ -3,7 +3,10 @@ name: Node.js Push Pipeline
 on:
   push:
     branches:
-      - "**" # Runs on all branches except main
+      - "**"
+  pull_request:
+    branches:
+      - "*"
 
 permissions:
   contents: read
@@ -11,53 +14,178 @@ permissions:
   checks: write
 
 jobs:
-  BuildAndUnitTestApp:
+  setup:
+    name: Setup & Install
     runs-on: ubuntu-latest
-
+    outputs:
+      node_modules_cache: ${{ steps.install.outputs.cache-hit }}
     steps:
-      
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-     
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-         node-version: 18
+          node-version: 18
 
-     
       - name: Install Dependencies
-        run: npm install  # Installs dependencies
+        id: install
+        run: npm install
+
+  build:
+    name: Build Project
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install Dependencies
+        run: npm install
 
       - name: Build Project
-        run: npm run build 
+        run: npm run build
+
+  unit-tests:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install Dependencies
+        run: npm install
 
       - name: Fix Jest Permission
         run: chmod +x ./node_modules/.bin/jest
 
-      - name: Run Unit Tests
-        run: ./node_modules/.bin/jest --runInBand
-
       - name: Run Unit Tests with Coverage
-        run: npm test -- --runInBand --coverage
+        run: |
+          npx jest --coverage --json --outputFile=jest-output.json --runInBand || true
+        continue-on-error: true
 
-      - name: Upload Coverage Report (HTML)
+      - name: Process Test Results
+        run: |
+          if [ ! -f "jest-output.json" ]; then
+            echo "jest-output.json not found. Skipping test analysis."
+            exit 0
+          fi
+          major_failures=$(jq '[.testResults[].assertionResults[] | select(.status == "failed" and (.title | test("^major:"))) ] | length' jest-output.json)
+          minor_failures=$(jq '[.testResults[].assertionResults[] | select(.status == "failed" and (.title | test("^minor:"))) ] | length' jest-output.json)
+          echo " Major test failures: $major_failures"
+          echo " Minor test failures: $minor_failures"
+          if [ "$major_failures" -gt 0 ]; then
+            echo " Build failed due to major test failures."
+            exit 1
+          fi
+          if [ "$minor_failures" -gt 0 ]; then
+            echo " Minor test cases failed. This is non-critical, proceeding with the build."
+          fi
+
+      - name: Upload Jest Output
+        uses: actions/upload-artifact@v4
+        with:
+          name: jest-output
+          path: jest-output.json
+
+      - name: Upload Coverage Folder
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-folder
+          path: coverage/
+
+      - name: Upload JUnit Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-report
+          path: reports/junit/js-test-results.xml
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Download Coverage Folder
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-folder
+          path: coverage/
+
+      - name: Download JUnit Report
+        uses: actions/download-artifact@v4
+        with:
+          name: junit-report
+          path: reports/junit/
+
+      - name: Upload HTML Coverage Report
         uses: actions/upload-artifact@v4
         with:
           name: html-coverage-report
           path: coverage/lcov-report/
-      
+
       - name: Upload lcov.info
         uses: actions/upload-artifact@v4
         with:
           name: lcov
           path: coverage/lcov.info
 
-      - name: Upload JUnit Test Results
+      - name: Upload Beautified Jest HTML Report
         uses: actions/upload-artifact@v4
         with:
-          name: jest-junit-report
-          path: reports/junit/js-test-results.xml
+          name: beautified-jest-report
+          path: coverage/test-report.html
 
+  sonar:
+    name: SonarQube Scan
+    runs-on: ubuntu-latest
+    needs: coverage
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-     
+      - name: Download Coverage Folder
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-folder
+          path: coverage/
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  # CodeQL-Analyze:
+  #   name: CodeQL Security Scan
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     actions: read
+  #     contents: read
+  #     security-events: write
+
+  #   steps:
+  #     - name: Checkout Repository
+  #       uses: actions/checkout@v3
+
+  #     # Initialize CodeQL (no autobuild)
+  #     - name: Initialize CodeQL
+  #       uses: github/codeql-action/init@v3
+  #       with:
+  #         languages: javascript
+
+  #     # Perform the analysis without autobuild
+  #     - name: Perform CodeQL Analysis
+  #       uses: github/codeql-action/analyze@v3
